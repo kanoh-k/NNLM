@@ -1,7 +1,4 @@
 # Character-based languaged model by RNN
-#
-# - Each character is represented as a one-hot vector of 27 (= vocabulary_size) dimensions.
-# - Input data should be a tensor of (data_num, chunk_size, vocaburary_size) dimensions.
 
 import tensorflow as tf
 import numpy as np
@@ -72,17 +69,6 @@ class Corpus:
         data = np.array([self.make_one_hot(char) for char in text])
         return data.transpose() # (vocabulary_size, data_num)
 
-# Awesome tutorial for RNN in TensorFlow
-# https://pythonprogramming.net/rnn-tensorflow-python-machine-learning-tutorial/
-#
-# Official tutorial
-# https://www.tensorflow.org/versions/r0.12/tutorials/recurrent/index.html
-
-# TODO: read this
-# http://zejiazheng.com/?p=196
-# http://zejiazheng.com/?p=203
-#
-# http://karpathy.github.io/2015/05/21/rnn-effectiveness/
 class CharacterBasedLM:
     """
     Input layer: vocabulary_size = 27
