@@ -8,6 +8,7 @@ import math
 import matplotlib.pyplot as plt
 import pickle
 from sklearn.manifold import TSNE
+from tensorflow.contrib.tensorboard.plugins import projector
 
 class Corpus:
     def __init__(self):
@@ -16,7 +17,7 @@ class Corpus:
         self.batch_size = 8
         self.num_skips = 2
         self.skip_window = 1
-        self.num_epochs = 1000
+        self.num_epochs = 30
         self.learning_rate = 0.1
 
         self.current_index = 0
@@ -137,8 +138,10 @@ class Corpus:
         # valid_embeddings = tf.nn.embedding_lookup(normalized_embeddings, valid_dataset)
         # similarity = tf.matmul(valid_embeddings, normalized_embeddings, transpose_b=True)
 
+        logdir = "./corpus/log"
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
+            saver = tf.train.Saver()
 
             # 決められた回数エポックを回す
             for epoch in range(self.num_epochs):
@@ -150,14 +153,21 @@ class Corpus:
 
                 print("Epoch", epoch, "completed out of", self.num_epochs, "-- loss:", epoch_loss)
 
-            # 一応モデルを保存
-            saver = tf.train.Saver()
-            saver.save(sess, "./corpus/model/blog.ckpt")
+                # Embeddings Visualizationのために、モデルを保存
+                saver.save(sess, logdir + "/blog.ckpt", epoch)
 
             # 学習済みの単語ベクトル
             self.final_embeddings = normalized_embeddings.eval() # <class 'numpy.ndarray'>
 
-        self.plot()
+            # Embeddings Visualiationにラベルを追加
+            summary_writer = tf.summary.FileWriter(logdir)
+            config = projector.ProjectorConfig()
+            embedding = config.embeddings.add()
+            embedding.tensor_name = embeddings.name # 右辺のembeddingsはこの関数の最初で定義したtf.Variable
+            embedding.metadata_path = "./corpus/model/blog.metadata.tsv"
+            projector.visualize_embeddings(summary_writer, config)
+
+        # self.plot()
 
         # 単語IDと学習済みの単語ベクトルを保存
         with open("./corpus/model/blog.dic", "wb") as f:
@@ -165,6 +175,14 @@ class Corpus:
         print("Dictionary was saved to", "./corpus/model/blog.dic")
         np.save("./corpus/model/blog.npy", self.final_embeddings)
         print("Embeddings were saved to", "./corpus/model/blog.npy/")
+
+        # Embeddings Visualizationで使うラベルをblog.metadata.tsvとして保存
+        # 上から単語ID順にラベルが入ったファイルを用意すればよい
+        sorted_dict = sorted(self.dictionary.items(), key=lambda x: x[1])
+        words = ["{}\n".format(x[0]) for x in sorted_dict]
+        with open("./corpus/model/blog.metadata.tsv", "w", encoding="utf-8") as f:
+            f.writelines(words)
+        print("Embeddings metadata was saved to ./corpus/model/blog.metadata.tsv")
 
     def plot(self, filename="./corpus/model/blog.png"):
         tsne = TSNE(perplexity=30, n_components=2, init="pca", n_iter=5000)
